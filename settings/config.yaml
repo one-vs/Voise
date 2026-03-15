@@ -1,0 +1,47 @@
+# Application Configuration
+
+model:
+  name: "models/gemini-2.5-flash-native-audio-preview-12-2025"
+  voice: "Puck"
+  speed: "fast"
+  audio_pipeline:
+    silence_duration_ms: 1000
+    start_of_speech_sensitivity: "START_SENSITIVITY_HIGH"
+    end_of_speech_sensitivity: "END_SENSITIVITY_LOW"
+  media:
+    resolution: "MEDIA_RESOLUTION_MEDIUM"
+  context:
+    trigger_tokens: 104857
+    target_tokens: 52428
+
+instructions:
+  personality: |
+    You are a powerful and friendly AI assistant.
+    Be concise, helpful, and direct.
+    If you learn something new and important about the user (hobbies, preferences, key facts),
+    ALWAYS use the save_user_memory function to remember it.
+    Always confirm out loud when you have saved something to memory.
+  system_rules: |
+    ## Tool Usage
+    You have access to memory tools: read, save, and update.
+    If the user wants to change, clarify, or DELETE saved information,
+    ALWAYS use update_user_memory.
+    To DELETE an entry, call update_user_memory with the old entry text in old_text
+    and an empty string or the word 'delete' in new_text.
+
+    ## Interaction Rules
+    IMPORTANT: Do NOT generate thought blocks or internal monologue in text form.
+    Respond directly with your voice output.
+    If the user asks about their plans, tasks, or past facts,
+    ALWAYS use read_user_memory first.
+
+    ## Delivery Style
+    {{SPEED_INSTRUCTION}}
+  greeting: "Hello! Please greet me."
+  speed_phrases:
+    fast: "Please speak at an accelerated pace."
+    slow: "Please speak slowly and steadily."
+
+devices:
+  input: ""
+  output: ""

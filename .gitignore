@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.env
+
+# Project specific
+user_store/
+trash/
+*.log
+
+# IDEs
+.vscode/
+.idea/
+.DS_Store
+
+# UV
+.uv/

@@ -1,0 +1,16 @@
+services:
+  voise:
+    image: voise-app:latest
+    container_name: voise_assistant
+    volumes:
+      - ./user_store:/app/user_store
+      - ./settings:/app/settings
+      - ./.env:/app/.env
+    devices:
+      - "/dev/snd:/dev/snd"
+      - "/dev/video0:/dev/video0"
+    environment:
+      - PYTHONUNBUFFERED=1
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
