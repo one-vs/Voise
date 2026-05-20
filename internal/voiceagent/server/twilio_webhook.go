@@ -16,10 +16,7 @@ func ValidateTwilioSignature(r *http.Request, authToken string, url string) bool
 		return false
 	}
 
-	// 1. Start with the full URL
 	data := url
-
-	// 2. Append all POST parameters, sorted alphabetically by key
 	if r.Method == http.MethodPost {
 		r.ParseForm()
 		keys := make([]string, 0, len(r.PostForm))
@@ -32,7 +29,6 @@ func ValidateTwilioSignature(r *http.Request, authToken string, url string) bool
 		}
 	}
 
-	// 3. Compute HMAC-SHA1
 	mac := hmac.New(sha1.New, []byte(authToken))
 	mac.Write([]byte(data))
 	computedSignature := base64.StdEncoding.EncodeToString(mac.Sum(nil))
@@ -40,21 +36,17 @@ func ValidateTwilioSignature(r *http.Request, authToken string, url string) bool
 	return computedSignature == expectedSignature
 }
 
-// TwilioSignatureMiddleware is a middleware that validates Twilio signatures.
-func TwilioSignatureMiddleware(authToken string, next http.HandlerFunc) http.HandlerFunc {
+// HandleIncomingCall handles incoming Twilio voice calls.
+func HandleIncomingCall(wssURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// In a real scenario, you'd want the full URL as Twilio sees it.
-		// For simplicity, we assume the URL is reconstructed or passed.
-		scheme := "https"
-		if r.TLS == nil {
-			scheme = "http"
+		builder := NewTwiMLBuilder()
+		// In a real app, you would generate a unique session token
+		params := map[string]string{
+			"auth_token": "temporary_token",
 		}
-		url := fmt.Sprintf("%s://%s%s", scheme, r.Host, r.URL.Path)
+		builder.ConnectStream(wssURL, params)
 
-		if !ValidateTwilioSignature(r, authToken, url) {
-			http.Error(w, "Forbidden", http.StatusForbidden)
-			return
-		}
-		next(w, r)
+		w.Header().Set("Content-Type", "text/xml")
+		fmt.Fprint(w, builder.Build())
 	}
 }
