@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"voise/internal/voiceagent/mcp"
 	"voise/internal/voiceagent/tools"
 )
 
@@ -13,14 +14,16 @@ type Manager struct {
 	sessions   map[uuid.UUID]*Session
 	db         *sqlx.DB
 	toolRouter *tools.ToolRouter
+	mcpHub     *mcp.Hub
 	mu         sync.RWMutex
 }
 
-func NewManager(db *sqlx.DB, router *tools.ToolRouter) *Manager {
+func NewManager(db *sqlx.DB, router *tools.ToolRouter, mcpHub *mcp.Hub) *Manager {
 	return &Manager{
 		sessions:   make(map[uuid.UUID]*Session),
 		db:         db,
 		toolRouter: router,
+		mcpHub:     mcpHub,
 	}
 }
 

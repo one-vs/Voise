@@ -38,8 +38,8 @@ type PrebuiltVoiceConfig struct {
 	VoiceName string `json:"voice_name"`
 }
 
-func NewLiveConnectConfig(model, instructions string) *LiveConnectConfig {
-	return &LiveConnectConfig{
+func NewLiveConnectConfig(model, instructions string, toolDecls []FunctionDeclaration) *LiveConnectConfig {
+	cfg := &LiveConnectConfig{
 		Model: model,
 		SystemInstructions: &SystemInstructions{
 			Parts: []Part{{Text: instructions}},
@@ -48,4 +48,8 @@ func NewLiveConnectConfig(model, instructions string) *LiveConnectConfig {
 			ResponseModalities: []string{"AUDIO"},
 		},
 	}
+	if len(toolDecls) > 0 {
+		cfg.Tools = []Tool{{FunctionDeclarations: toolDecls}}
+	}
+	return cfg
 }

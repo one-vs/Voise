@@ -61,6 +61,32 @@ func HandleIncomingCall(path string) http.HandlerFunc {
 	}
 }
 
+// HandleOutboundCall handles Twilio callback for outbound calls.
+func HandleOutboundCall(wssURL string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		builder := NewTwiMLBuilder()
+		// Outbound call often needs different initial prompt or context
+		params := map[string]string{
+			"auth_token": "temp-outbound-" + r.FormValue("CallSid"),
+		}
+		builder.ConnectStream(wssURL, params)
+
+		w.Header().Set("Content-Type", "text/xml")
+		fmt.Fprint(w, builder.Build())
+	}
+}
+
+// HandleCallStatus handles Twilio CallStatus callbacks.
+func HandleCallStatus() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		sid := r.FormValue("CallSid")
+		status := r.FormValue("CallStatus")
+		// Update DB record
+		fmt.Printf("Call %s status changed to %s\n", sid, status)
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
 // TwilioSignatureMiddleware is a middleware that validates Twilio signatures.
 func TwilioSignatureMiddleware(authToken string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

@@ -10,22 +10,44 @@ import (
 
 	"voise/internal/voiceagent/config"
 	"voise/internal/voiceagent/gemini"
+	"voise/internal/voiceagent/mcp"
 	"voise/internal/voiceagent/server"
 	"voise/internal/voiceagent/session"
 	"voise/internal/voiceagent/tools"
 	"voise/internal/voiceagent/tools/native"
 	"voise/internal/voiceagent/voicelog"
+
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 )
 
 func main() {
 	// Initialize logging
 	log := voicelog.Logger
 
+	// Initialize Tracer
+	tp, _ := voicelog.InitTracer()
+	if tp != nil {
+		defer tp.Shutdown(context.Background())
+	}
+
 	// Initialize configuration
 	cfg, err := config.LoadConfig("config.yaml")
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to load config, using defaults")
 		cfg = &config.Config{}
+	}
+
+	// Initialize Database
+	var db *sqlx.DB
+	if cfg.VoiceAgent.DatabaseURL != "" {
+		db, err = sqlx.Connect("postgres", cfg.VoiceAgent.DatabaseURL)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to connect to database")
+		} else {
+			log.Info().Msg("Connected to database")
+			defer db.Close()
+		}
 	}
 
 	// Initialize registry and register native tools
@@ -36,11 +58,24 @@ func main() {
 	registry.Register("check_calendar_slot", native.CheckCalendarSlot)
 	registry.Register("list_available_slots", native.ListAvailableSlots)
 	registry.Register("book_appointment", native.BookAppointment)
+	registry.Register("cancel_appointment", native.CancelAppointment)
+	registry.Register("reschedule_appointment", native.RescheduleAppointment)
+	registry.Register("log_interaction", native.LogInteraction)
+	registry.Register("save_note", native.SaveNote)
+	registry.Register("query_memory", native.QueryMemory)
 	registry.Register("outbound_call", native.OutboundCall)
 	router := tools.NewToolRouter(registry)
 
+	// Initialize MCP Hub
+	mcpHub := mcp.NewHub()
+	if cfg.VoiceAgent.MCP.ConfigPath != "" {
+		if err := mcpHub.LoadConfig(cfg.VoiceAgent.MCP.ConfigPath); err != nil {
+			log.Warn().Err(err).Msg("Failed to load MCP config")
+		}
+	}
+
 	// Initialize managers
-	sessionMgr := session.NewManager(nil, router)
+	sessionMgr := session.NewManager(db, router, mcpHub)
 	geminiClient := gemini.NewClient(cfg.VoiceAgent.Gemini.APIKey, cfg.VoiceAgent.Gemini.Model)
 
 	mux := http.NewServeMux()
@@ -61,6 +96,9 @@ func main() {
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
+
+	// GraphQL API
+	mux.HandleFunc("/graphql", server.HandleGraphQL(db))
 
 	srv := &http.Server{
 		Addr:    ":8080",

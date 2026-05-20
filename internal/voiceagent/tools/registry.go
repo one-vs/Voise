@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+
+	"github.com/jmoiron/sqlx"
 )
 
-type ToolHandler func(ctx context.Context, args json.RawMessage) (interface{}, error)
+type ToolHandler func(ctx context.Context, db *sqlx.DB, args json.RawMessage) (interface{}, error)
 
 type ToolRegistry struct {
 	tools map[string]ToolHandler
@@ -40,10 +42,10 @@ func NewToolRouter(r *ToolRegistry) *ToolRouter {
 	return &ToolRouter{registry: r}
 }
 
-func (tr *ToolRouter) Invoke(ctx context.Context, name string, args json.RawMessage) (interface{}, error) {
+func (tr *ToolRouter) Invoke(ctx context.Context, db *sqlx.DB, name string, args json.RawMessage) (interface{}, error) {
 	handler := tr.registry.Get(name)
 	if handler == nil {
 		return nil, fmt.Errorf("tool not found: %s", name)
 	}
-	return handler(ctx, args)
+	return handler(ctx, db, args)
 }
