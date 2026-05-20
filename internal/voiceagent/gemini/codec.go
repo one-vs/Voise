@@ -40,10 +40,23 @@ type FunctionCall struct {
 
 // GeminiResponse is a top-level response from the Gemini WS.
 type GeminiResponse struct {
-	ServerContent *ServerContent `json:"serverContent,omitempty"`
-	ToolCall      *ToolCall      `json:"toolCall,omitempty"`
-	SetupComplete *SetupComplete `json:"setupComplete,omitempty"`
+	ServerContent         *ServerContent         `json:"serverContent,omitempty"`
+	ToolCall              *ToolCall              `json:"toolCall,omitempty"`
+	SetupComplete         *SetupComplete         `json:"setupComplete,omitempty"`
+	RealtimeInputResponse *RealtimeInputResponse `json:"realtimeInputResponse,omitempty"`
 }
 
 // SetupComplete represents the 'setupComplete' message.
 type SetupComplete struct{}
+
+// Transcription represents the transcription from Gemini.
+type Transcription struct {
+	Text      string `json:"text"`
+	Speaker   string `json:"speaker"`
+	IsFinal   bool   `json:"isFinal"`
+	Timestamp string `json:"timestamp"`
+}
+
+type RealtimeInputResponse struct {
+	Transcription *Transcription `json:"transcription,omitempty"`
+}

@@ -5,16 +5,22 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
+	"voise/internal/voiceagent/tools"
 )
 
 type Manager struct {
-	sessions map[uuid.UUID]*Session
-	mu       sync.RWMutex
+	sessions   map[uuid.UUID]*Session
+	db         *sqlx.DB
+	toolRouter *tools.ToolRouter
+	mu         sync.RWMutex
 }
 
-func NewManager() *Manager {
+func NewManager(db *sqlx.DB, router *tools.ToolRouter) *Manager {
 	return &Manager{
-		sessions: make(map[uuid.UUID]*Session),
+		sessions:   make(map[uuid.UUID]*Session),
+		db:         db,
+		toolRouter: router,
 	}
 }
 
@@ -23,8 +29,10 @@ func (m *Manager) Create(ctx context.Context, callID uuid.UUID) *Session {
 	defer m.mu.Unlock()
 
 	s := &Session{
-		ID:     uuid.New(),
-		CallID: callID,
+		ID:         uuid.New(),
+		CallID:     callID,
+		DB:         m.db,
+		ToolRouter: m.toolRouter,
 	}
 	m.sessions[s.ID] = s
 	return s

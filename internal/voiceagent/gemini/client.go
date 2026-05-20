@@ -29,6 +29,9 @@ type Conn struct {
 
 // Connect connects to the Gemini Live API.
 func (c *Client) Connect(ctx context.Context) (*Conn, error) {
+	if c.apiKey == "" {
+		return nil, fmt.Errorf("gemini API key is required")
+	}
 	url := fmt.Sprintf("wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=%s", c.apiKey)
 
 	dialer := websocket.DefaultDialer

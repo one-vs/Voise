@@ -1,0 +1,15 @@
+voice_agent:
+  database_url: "postgres://user:pass@localhost:5432/taskroom?sslmode=disable"
+  gemini:
+    api_key: "YOUR_GEMINI_API_KEY"
+    model: "gemini-2.0-flash-exp"
+  twilio:
+    account_sid: "YOUR_TWILIO_ACCOUNT_SID"
+    auth_token: "YOUR_TWILIO_AUTH_TOKEN"
+  mcp:
+    config_path: "config/mcp.yaml"
+  session:
+    max_duration: 15m
+    silence_timeout: 30s
+  recording:
+    enabled: false

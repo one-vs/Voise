@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gorilla/websocket"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
+	"voise/internal/voiceagent/gemini"
 	"voise/internal/voiceagent/session"
 	"voise/internal/voiceagent/voicelog"
 )
@@ -29,10 +30,18 @@ type TwilioMedia struct {
 type TwilioStart struct {
 	StreamSID string `json:"streamSid"`
 	CallSID   string `json:"callSid"`
+	StartData map[string]interface{} `json:"startData"`
 }
 
-func HandleTwilioWS(mgr *session.Manager) http.HandlerFunc {
+func HandleTwilioWS(mgr *session.Manager, geminiClient *gemini.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Simple token validation
+		token := r.URL.Query().Get("auth_token")
+		if token == "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			voicelog.Logger.Error().Err(err).Msg("Failed to upgrade Twilio WS")
@@ -59,7 +68,13 @@ func HandleTwilioWS(mgr *session.Manager) http.HandlerFunc {
 				// In a real app, we'd resolve call details. For now, create a session.
 				s = mgr.Create(r.Context(), uuid.New())
 				s.TwilioConn = conn
-				// Note: Gemini connection would be initialized here too.
+				s.StreamSID = event.Start.StreamSID
+				s.GeminiClient = geminiClient
+
+				// Try to lookup customer by From number
+				// For now, we don't have the From number in this simple WS event,
+				// it's usually passed in the webhook call. Let's assume it's in metadata or handled at session level.
+
 				go s.Run(r.Context())
 			case "media":
 				if s != nil {

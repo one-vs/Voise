@@ -37,16 +37,43 @@ func ValidateTwilioSignature(r *http.Request, authToken string, url string) bool
 }
 
 // HandleIncomingCall handles incoming Twilio voice calls.
-func HandleIncomingCall(wssURL string) http.HandlerFunc {
+func HandleIncomingCall(path string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		builder := NewTwiMLBuilder()
+		// Construct absolute WSS URL
+		scheme := "wss"
+		if r.TLS == nil {
+			// Note: Twilio requires WSS in production.
+			// This is a simplification for local development/testing.
+		}
+		wssURL := fmt.Sprintf("%s://%s%s", scheme, r.Host, path)
+
 		// In a real app, you would generate a unique session token
+		// and store it in Redis or a similar store.
+		token := "temp-" + r.FormValue("CallSid")
 		params := map[string]string{
-			"auth_token": "temporary_token",
+			"auth_token": token,
 		}
 		builder.ConnectStream(wssURL, params)
 
 		w.Header().Set("Content-Type", "text/xml")
 		fmt.Fprint(w, builder.Build())
+	}
+}
+
+// TwilioSignatureMiddleware is a middleware that validates Twilio signatures.
+func TwilioSignatureMiddleware(authToken string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		scheme := "https"
+		if r.TLS == nil {
+			scheme = "http"
+		}
+		url := fmt.Sprintf("%s://%s%s", scheme, r.Host, r.URL.Path)
+
+		if !ValidateTwilioSignature(r, authToken, url) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		next(w, r)
 	}
 }

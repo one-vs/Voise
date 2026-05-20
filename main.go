@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"voise/internal/voiceagent/config"
+	"voise/internal/voiceagent/gemini"
 	"voise/internal/voiceagent/server"
 	"voise/internal/voiceagent/session"
 	"voise/internal/voiceagent/tools"
@@ -32,15 +33,25 @@ func main() {
 	registry.Register("lookup_customer", native.LookupCustomer)
 	registry.Register("transfer_to_human", native.TransferToHuman)
 	registry.Register("end_call", native.EndCall)
+	registry.Register("check_calendar_slot", native.CheckCalendarSlot)
+	registry.Register("list_available_slots", native.ListAvailableSlots)
+	registry.Register("book_appointment", native.BookAppointment)
+	registry.Register("outbound_call", native.OutboundCall)
+	router := tools.NewToolRouter(registry)
 
 	// Initialize managers
-	sessionMgr := session.NewManager()
+	sessionMgr := session.NewManager(nil, router)
+	geminiClient := gemini.NewClient(cfg.VoiceAgent.Gemini.APIKey, cfg.VoiceAgent.Gemini.Model)
 
 	mux := http.NewServeMux()
 
 	// Twilio Webhooks
-	mux.HandleFunc("/webhooks/twilio/voice/incoming", server.HandleIncomingCall("/voice/twilio/ws"))
-	mux.HandleFunc("/voice/twilio/ws", server.HandleTwilioWS(sessionMgr))
+	incomingHandler := server.HandleIncomingCall("/voice/twilio/ws")
+	if cfg.VoiceAgent.Twilio.AuthToken != "" {
+		incomingHandler = server.TwilioSignatureMiddleware(cfg.VoiceAgent.Twilio.AuthToken, incomingHandler)
+	}
+	mux.HandleFunc("/webhooks/twilio/voice/incoming", incomingHandler)
+	mux.HandleFunc("/voice/twilio/ws", server.HandleTwilioWS(sessionMgr, geminiClient))
 
 	// Health checks
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
