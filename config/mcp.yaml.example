@@ -1,0 +1,10 @@
+servers:
+  - name: google-calendar
+    transport: stdio
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-google-calendar"]
+    enabled: true
+  - name: weather
+    transport: http
+    url: "https://weather.example.com/sse"
+    enabled: false
